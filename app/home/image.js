@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {ActivityIndicator, Button, Platform, Pressable, StyleSheet, Text, View} from 'react-native';
+import {ActivityIndicator, Alert, Button, Platform, Pressable, StyleSheet, Text, View} from 'react-native';
 import {BlurView} from "expo-blur";
 import {hp, wp} from "../../helpers/common";
 import {useLocalSearchParams, useRouter} from "expo-router";
@@ -7,12 +7,19 @@ import {Image} from 'expo-image';
 import {theme} from "../../constants/theme";
 import {Entypo, Octicons} from "@expo/vector-icons";
 import Animated, {FadeInDown} from "react-native-reanimated";
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+
 
 const ImageScreen = () => {
     const router = useRouter();
     const item = useLocalSearchParams();
     const [status, setStatus] = useState("");
     let uri = item?.webformatURL;
+    const fileName = item?.previewURL?.split('/').pop();
+    const imageURL = uri;
+    const filePath = `${FileSystem.documentDirectory}${fileName}`
+
     const onLoad = () => {
         setStatus("");
     }
@@ -33,11 +40,35 @@ const ImageScreen = () => {
     }
 
     const handleDownloadImage = async () => {
+        setStatus("downloading")
+        await downloadFile()
+        console.log("image downloaded")
 
     }
 
-    const handleShareImage = async  => {
+    const handleShareImage = async () => {
+        setStatus("sharing");
+        let uri = await downloadFile();
+        if (uri){
+            // share image
+            await Sharing.shareAsync(uri);
+        }
 
+
+    }
+
+    const downloadFile = async () => {
+        try {
+            const {uri} = await FileSystem.downloadAsync(imageURL, filePath);
+            console.log(`Downloaded at: ${uri}`);
+            setStatus("");
+            return uri;
+        } catch (e) {
+            console.error(`Got error when download file: ${e.message}`)
+            Alert.alert("Image", e.message);
+            return null;
+
+        }
     }
 
     return (
@@ -58,21 +89,40 @@ const ImageScreen = () => {
             </View>
             <View style={styles.buttons}>
                 <Animated.View entering={FadeInDown.springify()}>
-                    <Pressable style={styles.button}  onPress={() => {
+                    <Pressable style={styles.button} onPress={() => {
                         router.back()
                     }}>
                         <Octicons name={"x"} size={24} color={"white"}/>
                     </Pressable>
                 </Animated.View>
                 <Animated.View entering={FadeInDown.springify().delay(100)}>
-                    <Pressable style={styles.button} onPress={handleDownloadImage}>
-                        <Octicons name={"download"} size={24} color={"white"}/>
-                    </Pressable>
+                    {
+                        status == "downloading" ? (
+                            <View style={styles.button}>
+                                <ActivityIndicator size={"small"} color={"white"}/>
+                            </View>
+                        ) : (
+                            <Pressable style={styles.button} onPress={handleDownloadImage}>
+
+                                <Octicons name={"download"} size={24} color={"white"}/>
+                            </Pressable>
+                        )
+                    }
+
                 </Animated.View>
                 <Animated.View entering={FadeInDown.springify().delay(200)}>
-                    <Pressable style={styles.button} onPress={handleShareImage}>
-                        <Entypo name={"share"} size={24} color={"white"}/>
-                    </Pressable>
+                    {
+                        status == "sharing" ? (
+                            <View style={styles.button}>
+                                <ActivityIndicator size={"small"} color={"white"}/>
+                            </View>
+                        ) : (
+                            <Pressable style={styles.button} onPress={handleShareImage}>
+                                <Entypo name={"share"} size={24} color={"white"}/>
+                            </Pressable>
+                        )
+                    }
+
                 </Animated.View>
             </View>
         </BlurView>

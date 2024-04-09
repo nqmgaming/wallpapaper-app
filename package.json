@@ -39,7 +39,8 @@
     "react-native-web": "~0.19.6",
     "react-native-gesture-handler": "~2.14.0",
     "expo-blur": "~12.9.2",
-    "expo-file-system": "~16.0.8"
+    "expo-file-system": "~16.0.8",
+    "expo-sharing": "~11.10.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

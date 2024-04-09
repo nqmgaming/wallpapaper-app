@@ -20,12 +20,14 @@ const HomeScreen = () => {
     const [images, setImages] = useState([]);
     const modelRef = useRef(null);
     const [filters, setFilters] = useState(null);
+    const scrollRef = useRef(null);
+    const [isEndReached, setIsEndReached] = useState(false);
 
     useEffect(() => {
         fetchImages();
     }, []);
 
-    const fetchImages = async (params = {page: 1}, append = false) => {
+    const fetchImages = async (params = {page: 1}, append = true) => {
         console.log(`Params: ${JSON.stringify(params)}`);
         let res = await apiCall(params);
 
@@ -61,6 +63,43 @@ const HomeScreen = () => {
 
     const clearSearch = () => {
         setSearch("");
+    }
+
+    const handleScroll= (event) => {
+       const contentHeight = event.nativeEvent.contentSize.height;
+       const scrollViewHeight = event.nativeEvent.layoutMeasurement.height;
+       const scrollOffset = event.nativeEvent.contentOffset.y;
+       const bottomPosition = contentHeight - scrollViewHeight;
+
+       if(scrollOffset>=bottomPosition-1) {
+
+           if (!isEndReached){
+               setIsEndReached(true)
+               console.log("reached the bottom of scrollview");
+               // fetch more image
+               ++page;
+               let params ={
+                   page,
+                   ...filters
+               }
+               if (activeCategory){
+                   params.category = activeCategory;
+               };
+               if (search){
+                   params.q = search;
+               };
+               fetchImages(params, true);
+           }
+       }else if(isEndReached) {
+           setIsEndReached(false);
+       }
+    }
+
+    const handleScrollUp = () => {
+        scrollRef?.current?.scrollTo({
+            y: 0,
+            animated: true,
+        });
     }
 
     const handleTextDebounce = useCallback(debounce(handleSearch, 400), [])
@@ -106,6 +145,24 @@ const HomeScreen = () => {
         }
         closeFilterModal();
     }
+
+    const clearThisFilter = (filterName) => {
+        let filterz = {...filters};
+        delete filterz[filterName];
+        setFilters({...filterz})
+        page = 1;
+        setImages([]);
+        let params = {
+            page,
+            ...filterz
+        }
+        if (activeCategory) params.category = activeCategory;
+        if (search) {
+            params.q = search
+        }
+        fetchImages(params, false)
+    }
+
     const handleChangeCategory = (category) => {
         setActiveCategory(category);
         clearSearch();
@@ -126,7 +183,9 @@ const HomeScreen = () => {
         <View style={[styles.container, {paddingTop}]}>
             {/*  Header  */}
             <View style={styles.header}>
-                <Pressable>
+                <Pressable
+                    onPress={handleScrollUp}
+                >
                     <Text style={styles.title}>
                         Pixels
                     </Text>
@@ -135,7 +194,12 @@ const HomeScreen = () => {
                     <FontAwesome6 name="bars-staggered" size={22} color={theme.colors.neutral(0.7)}/>
                 </Pressable>
             </View>
-            <ScrollView contentContainerStyle={{gap: 15}}>
+            <ScrollView
+                contentContainerStyle={{gap: 15}}
+                onScroll={handleScroll}
+                scrollEventThrottle={5}
+                ref={scrollRef}
+            >
                 {/*    Searchbar */}
                 <View style={styles.searchbar}>
                     <View style={styles.searchIcon}>
@@ -159,6 +223,43 @@ const HomeScreen = () => {
                     <Categories activeCategory={activeCategory} handleChangeCategory={handleChangeCategory}/>
                 </View>
                 {/* filter */}
+                {
+                    filters && (
+                        <View style={styles.filter}>
+                            <ScrollView
+                                horizontal={true}
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.filters}>
+                                {
+                                    Object.keys(filters).map((key, index) => {
+                                        return (
+                                            <View>
+                                                <View key={key} style={styles.filterItem}>
+                                                    {
+                                                        key=='colors' ? (
+                                                            <View style={{height: hp(2.22),width: 30, borderRadius: 7, backgroundColor: filters[key]}}>
+                                                            </View>
+                                                        ): (
+                                                            <Text style={styles.filterItemText}>
+                                                                {filters[key]}
+                                                            </Text>
+                                                        )
+                                                    }
+
+                                                    <Pressable style={styles.filterCloseIcon}
+                                                               onPress={() => clearThisFilter(key)}>
+                                                        <Ionicons name="close" size={14} color={theme.colors.neutral(0.9)}/>
+
+                                                    </Pressable>
+                                                </View>
+                                            </View>
+                                        )
+                                    })
+                                }
+                            </ScrollView>
+                        </View>
+                    )
+                }
                 {/*    images masony grid */}
                 <View>
                     {images.length > 0 && <ImageGrid images={images}/>}
@@ -223,6 +324,28 @@ const styles = StyleSheet.create({
         backgroundColor: theme.colors.neutral(0.1),
         padding: 8,
         borderRadius: theme.radius.sm
+    },
+    filters: {
+        paddingHorizontal: wp(4),
+        gap: 10
+    },
+    filterItem: {
+        backgroundColor: theme.colors.grayBG,
+        flexDirection: "row",
+        borderRadius: theme.radius.xs,
+        padding: 8,
+        paddingHorizontal: 10,
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 10
+    },
+    filterItemText: {
+        fontSize: hp(1.9)
+    },
+    filterCloseIcon: {
+        backgroundColor: theme.colors.neutral(0.2),
+        padding: 4,
+        borderRadius: 7
     }
 });
 

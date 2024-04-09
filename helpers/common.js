@@ -26,14 +26,18 @@ export const getColumnCount = () => {
 }
 
 export const getImageSize = (height, width) => {
-    if (width>height) {
+    if (width > height) {
         // landscape
         return 250;
-    }else if (width>height) {
+    } else if (width > height) {
         // portrait
         return 300;
-    }else {
+    } else {
         // square
         return 200;
     }
+}
+
+export const capitalize = (str) => {
+    return str.replace(/\b\w/g, l => l.toUpperCase())
 }

@@ -1,5 +1,5 @@
 import React, {useRef, useState, useEffect, useCallback} from 'react';
-import {Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
+import {ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
 import {useSafeAreaInsets} from "react-native-safe-area-context";
 import {Feather, FontAwesome6, Ionicons} from '@expo/vector-icons';
 import {theme} from "../../constants/theme";
@@ -8,6 +8,7 @@ import Categories from "../../components/categories";
 import {apiCall} from "../../api";
 import ImageGrid from "../../components/imageGrid";
 import {debounce} from 'lodash';
+import FiltersModal from "../../components/filtersModal";
 
 var page = 1;
 const HomeScreen = () => {
@@ -17,6 +18,8 @@ const HomeScreen = () => {
     const searchInputRef = useRef(null);
     const [activeCategory, setActiveCategory] = useState(null);
     const [images, setImages] = useState([]);
+    const modelRef = useRef(null);
+    const [filters, setFilters] = useState(null);
 
     useEffect(() => {
         fetchImages();
@@ -42,32 +45,75 @@ const HomeScreen = () => {
             // search for this text
             page = 1;
             setImages([]);
-            fetchImages({page, q: text}, false);
+            setActiveCategory(null)
+            fetchImages({page, q: text, ...filters}, false);
         }
         if (text === "") {
             // reset result
             page = 1;
             searchInputRef?.current?.clear();
             setImages([]);
-            fetchImages({page}, false);
+            setActiveCategory(null)
+            fetchImages({page, filters}, false);
         }
 
     }
 
-    const clearSearch =() => {
+    const clearSearch = () => {
         setSearch("");
     }
 
     const handleTextDebounce = useCallback(debounce(handleSearch, 400), [])
 
+    const openFiltersModal = () => {
+        modelRef?.current.present();
+    }
 
+    const closeFilterModal = () => {
+        modelRef?.current.close();
+    }
+
+    const applyFilters = () => {
+        console.log(`Apply filters: ${filters}`);
+        if (filters) {
+            page = 1;
+            setImages([]);
+            let params = {
+                page,
+                ...filters
+            };
+            if (activeCategory) params.category = activeCategory;
+            if (search) {
+                params.q = search
+            }
+            fetchImages(params, false)
+        }
+        closeFilterModal();
+    }
+    const resetFilters = () => {
+        if (filters) {
+            page = 1;
+            setFilters(null);
+            setImages([]);
+            let params = {
+                page
+            };
+            if (activeCategory) params.category = activeCategory;
+            if (search) {
+                params.q = search
+            }
+            fetchImages(params, false)
+        }
+        closeFilterModal();
+    }
     const handleChangeCategory = (category) => {
         setActiveCategory(category);
         clearSearch();
         setImages([]);
         page = 1;
-        let params ={
+        let params = {
             page,
+            ...filters
         }
 
         if (category) {
@@ -75,6 +121,7 @@ const HomeScreen = () => {
         }
         fetchImages(params, false)
     };
+
     return (
         <View style={[styles.container, {paddingTop}]}>
             {/*  Header  */}
@@ -84,7 +131,7 @@ const HomeScreen = () => {
                         Pixels
                     </Text>
                 </Pressable>
-                <Pressable>
+                <Pressable onPress={openFiltersModal}>
                     <FontAwesome6 name="bars-staggered" size={22} color={theme.colors.neutral(0.7)}/>
                 </Pressable>
             </View>
@@ -111,11 +158,25 @@ const HomeScreen = () => {
                 <View style={styles.categories}>
                     <Categories activeCategory={activeCategory} handleChangeCategory={handleChangeCategory}/>
                 </View>
+                {/* filter */}
                 {/*    images masony grid */}
                 <View>
                     {images.length > 0 && <ImageGrid images={images}/>}
                 </View>
+                {/*    loading */}
+                <View style={{marginTop: images.length > 0 ? 10 : 70, marginBottom: 70}}>
+                    <ActivityIndicator size={"large"}/>
+                </View>
             </ScrollView>
+            {/*    filter mdel*/}
+            <FiltersModal
+                modalRef={modelRef}
+                filters={filters}
+                setFilters={setFilters}
+                onClose={closeFilterModal}
+                onApply={applyFilters}
+                onReset={resetFilters}
+            />
         </View>
     );
 };

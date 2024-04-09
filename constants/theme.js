@@ -1,5 +1,3 @@
-import { opacity } from "react-native-reanimated/lib/typescript/reanimated2/Colors";
-
 export const theme = {
     colors: {
         white: "#ffffff",

@@ -235,14 +235,14 @@ const HomeScreen = () => {
                                 {
                                     Object.keys(filters).map((key, index) => {
                                         return (
-                                            <View>
-                                                <View key={key} style={styles.filterItem}>
+                                            <View key={index}>
+                                                <View key={index} style={styles.filterItem}>
                                                     {
                                                         key=='colors' ? (
-                                                            <View style={{height: hp(2.22),width: 30, borderRadius: 7, backgroundColor: filters[key]}}>
+                                                            <View key={index} style={{height: hp(2.22),width: 30, borderRadius: 7, backgroundColor: filters[key]}}>
                                                             </View>
                                                         ): (
-                                                            <Text style={styles.filterItemText}>
+                                                            <Text key={index} style={styles.filterItemText}>
                                                                 {filters[key]}
                                                             </Text>
                                                         )
